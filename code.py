@@ -11,15 +11,18 @@ import os
 import time
 import displayio
 import terminalio
+import json
+
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_text import label
 from adafruit_macropad import MacroPad
+from adafruit_hid.keycode import Keycode
 
 
 # CONFIGURABLES ------------------------
 
 MACRO_FOLDER = '/macros'
-
+MACRO_FILE = 'macro.json'
 
 # CLASSES AND FUNCTIONS ----------------
 
@@ -36,7 +39,7 @@ class App:
             colors. """
         group[13].text = self.name   # Application name
         for i in range(12):
-            if i < len(self.macros): # Key in use, set label + LED color
+            if i < len(self.macros):  # Key in use, set label + LED color
                 macropad.pixels[i] = self.macros[i][0]
                 group[i].text = self.macros[i][1]
             else:  # Key not in use, no label or LED
@@ -73,25 +76,49 @@ group.append(label.Label(terminalio.FONT, text='', color=0x000000,
 macropad.display.show(group)
 
 # Load all the macro key setups from .py files in MACRO_FOLDER
-apps = []
-files = os.listdir(MACRO_FOLDER)
-files.sort()
-for filename in files:
-    if filename.endswith('.py'):
-        try:
-            module = __import__(MACRO_FOLDER + '/' + filename[:-3])
-            apps.append(App(module.app))
-        except (SyntaxError, ImportError, AttributeError, KeyError, NameError,
-                IndexError, TypeError) as err:
-            print("ERROR in", filename)
-            import traceback
-            traceback.print_exception(err, err, err.__traceback__)
+with open('macro.json') as f:
+  pages = json.load(f)
 
-if not apps:
-    group[13].text = 'NO MACRO FILES FOUND'
-    macropad.display.refresh()
-    while True:
-        pass
+apps = []
+
+for page in pages:
+
+  keys = page['keys']
+
+  imported_keys = []
+
+  for key in keys:
+    color_hex_string = "0x" + key['color']
+    color_hex = int(color_hex_string, 16)
+    macro = key['macro']
+
+    text_string = macro.get('textContent')
+    modifiers = macro.get('modifiers')
+
+    imported_sequence = []
+
+    if modifiers:
+        for modifier in modifiers:
+            hex_modifier = int(modifier, 16)
+            print(hex_modifier)
+            keycode = Keycode(hex_modifier)
+            imported_sequence.append(hex_modifier)
+            print(imported_sequence)
+
+
+    if text_string:
+        imported_sequence.append(text_string)
+
+    configured_key = (color_hex, key['label'], imported_sequence)
+    imported_keys.append(configured_key)
+
+  app = {
+    'name' : page['name'],
+    'macros' : imported_keys
+  }
+
+  apps.append(App(app))
+
 
 last_position = None
 last_encoder_switch = macropad.encoder_switch_debounced.pressed
