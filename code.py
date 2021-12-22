@@ -21,30 +21,32 @@ from adafruit_hid.keycode import Keycode
 
 # CONFIGURABLES ------------------------
 
-MACRO_FOLDER = '/macros'
-MACRO_FILE = 'macro.json'
+MACRO_FOLDER = "/macros"
+MACRO_FILE = "macro.json"
 
 # CLASSES AND FUNCTIONS ----------------
 
+
 class App:
-    """ Class representing a host-side application, for which we have a set
-        of macro sequences. Project code was originally more complex and
-        this was helpful, but maybe it's excessive now?"""
+    """Class representing a host-side application, for which we have a set
+    of macro sequences. Project code was originally more complex and
+    this was helpful, but maybe it's excessive now?"""
+
     def __init__(self, appdata):
-        self.name = appdata['name']
-        self.macros = appdata['macros']
+        self.name = appdata["name"]
+        self.macros = appdata["macros"]
 
     def switch(self):
-        """ Activate application settings; update OLED labels and LED
-            colors. """
-        group[13].text = self.name   # Application name
+        """Activate application settings; update OLED labels and LED
+        colors."""
+        group[13].text = self.name  # Application name
         for i in range(12):
             if i < len(self.macros):  # Key in use, set label + LED color
                 macropad.pixels[i] = self.macros[i][0]
                 group[i].text = self.macros[i][1]
             else:  # Key not in use, no label or LED
                 macropad.pixels[i] = 0
-                group[i].text = ''
+                group[i].text = ""
         macropad.keyboard.release_all()
         macropad.consumer_control.release()
         macropad.mouse.release_all()
@@ -64,60 +66,69 @@ group = displayio.Group()
 for key_index in range(12):
     x = key_index % 3
     y = key_index // 3
-    group.append(label.Label(terminalio.FONT, text='', color=0xFFFFFF,
-                             anchored_position=((macropad.display.width - 1) * x / 2,
-                                                macropad.display.height - 1 -
-                                                (3 - y) * 12),
-                             anchor_point=(x / 2, 1.0)))
+    group.append(
+        label.Label(
+            terminalio.FONT,
+            text="",
+            color=0xFFFFFF,
+            anchored_position=(
+                (macropad.display.width - 1) * x / 2,
+                macropad.display.height - 1 - (3 - y) * 12,
+            ),
+            anchor_point=(x / 2, 1.0),
+        )
+    )
 group.append(Rect(0, 0, macropad.display.width, 12, fill=0xFFFFFF))
-group.append(label.Label(terminalio.FONT, text='', color=0x000000,
-                         anchored_position=(macropad.display.width//2, -2),
-                         anchor_point=(0.5, 0.0)))
+group.append(
+    label.Label(
+        terminalio.FONT,
+        text="",
+        color=0x000000,
+        anchored_position=(macropad.display.width // 2, -2),
+        anchor_point=(0.5, 0.0),
+    )
+)
 macropad.display.show(group)
 
 # Load all the macro key setups from .py files in MACRO_FOLDER
-with open('macro.json') as f:
-  pages = json.load(f)
+with open("macro.json") as f:
+    pages = json.load(f)
 
 apps = []
 
 for page in pages:
 
-  keys = page['keys']
+    keys = page["keys"]
 
-  imported_keys = []
+    imported_keys = []
 
-  for key in keys:
-    color_hex_string = "0x" + key['color']
-    color_hex = int(color_hex_string, 16)
-    macro = key['macro']
+    for key in keys:
+        color_hex_string = "0x" + key["color"]
+        color_hex = int(color_hex_string, 16)
+        macro = key["macro"]
 
-    text_string = macro.get('textContent')
-    modifiers = macro.get('modifiers')
+        text_string = macro.get("textContent")
+        modifiers = macro.get("modifiers")
 
-    imported_sequence = []
+        imported_sequence = []
 
-    if modifiers:
-        for modifier in modifiers:
-            hex_modifier = int(modifier, 16)
-            print(hex_modifier)
-            keycode = Keycode(hex_modifier)
-            imported_sequence.append(hex_modifier)
-            print(imported_sequence)
+        if modifiers:
+            for modifier in modifiers:
+                hex_modifier = int(modifier, 16)
+                print(hex_modifier)
+                keycode = Keycode(hex_modifier)
+                imported_sequence.append(hex_modifier)
+                print(imported_sequence)
 
+        if text_string:
+            imported_sequence.append(text_string)
 
-    if text_string:
-        imported_sequence.append(text_string)
+        configured_key = (color_hex, key["label"], imported_sequence)
+        imported_keys.append(configured_key)
 
-    configured_key = (color_hex, key['label'], imported_sequence)
-    imported_keys.append(configured_key)
+    app = {"name": page["name"], "macros": imported_keys}
 
-  app = {
-    'name' : page['name'],
-    'macros' : imported_keys
-  }
-
-  apps.append(App(app))
+    apps.append(App(app))
 
 
 last_position = None
@@ -144,13 +155,13 @@ while True:
     if encoder_switch != last_encoder_switch:
         last_encoder_switch = encoder_switch
         if len(apps[app_index].macros) < 13:
-            continue    # No 13th macro, just resume main loop
-        key_number = 12 # else process below as 13th macro
+            continue  # No 13th macro, just resume main loop
+        key_number = 12  # else process below as 13th macro
         pressed = encoder_switch
     else:
         event = macropad.keys.events.get()
         if not event or event.key_number >= len(apps[app_index].macros):
-            continue # No key events, or no corresponding macro, resume loop
+            continue  # No key events, or no corresponding macro, resume loop
         key_number = event.key_number
         pressed = event.pressed
 
@@ -167,7 +178,7 @@ while True:
         # String (e.g. "Foo"): corresponding keys pressed & released
         # List []: one or more Consumer Control codes (can also do float delay)
         # Dict {}: mouse buttons/motion (might extend in future)
-        if key_number < 12: # No pixel for encoder button
+        if key_number < 12:  # No pixel for encoder button
             macropad.pixels[key_number] = 0xFFFFFF
             macropad.pixels.show()
         for item in sequence:
@@ -188,22 +199,24 @@ while True:
                     if isinstance(code, float):
                         time.sleep(code)
             elif isinstance(item, dict):
-                if 'buttons' in item:
-                    if item['buttons'] >= 0:
-                        macropad.mouse.press(item['buttons'])
+                if "buttons" in item:
+                    if item["buttons"] >= 0:
+                        macropad.mouse.press(item["buttons"])
                     else:
-                        macropad.mouse.release(-item['buttons'])
-                macropad.mouse.move(item['x'] if 'x' in item else 0,
-                                    item['y'] if 'y' in item else 0,
-                                    item['wheel'] if 'wheel' in item else 0)
-                if 'tone' in item:
-                    if item['tone'] > 0:
+                        macropad.mouse.release(-item["buttons"])
+                macropad.mouse.move(
+                    item["x"] if "x" in item else 0,
+                    item["y"] if "y" in item else 0,
+                    item["wheel"] if "wheel" in item else 0,
+                )
+                if "tone" in item:
+                    if item["tone"] > 0:
                         macropad.stop_tone()
-                        macropad.start_tone(item['tone'])
+                        macropad.start_tone(item["tone"])
                     else:
                         macropad.stop_tone()
-                elif 'play' in item:
-                    macropad.play_file(item['play'])
+                elif "play" in item:
+                    macropad.play_file(item["play"])
     else:
         # Release any still-pressed keys, consumer codes, mouse buttons
         # Keys and mouse buttons are individually released this way (rather
@@ -215,12 +228,12 @@ while True:
                 if item >= 0:
                     macropad.keyboard.release(item)
             elif isinstance(item, dict):
-                if 'buttons' in item:
-                    if item['buttons'] >= 0:
-                        macropad.mouse.release(item['buttons'])
-                elif 'tone' in item:
+                if "buttons" in item:
+                    if item["buttons"] >= 0:
+                        macropad.mouse.release(item["buttons"])
+                elif "tone" in item:
                     macropad.stop_tone()
         macropad.consumer_control.release()
-        if key_number < 12: # No pixel for encoder button
+        if key_number < 12:  # No pixel for encoder button
             macropad.pixels[key_number] = apps[app_index].macros[key_number][0]
             macropad.pixels.show()
