@@ -115,10 +115,8 @@ for page in pages:
         if modifiers:
             for modifier in modifiers:
                 hex_modifier = int(modifier, 16)
-                print(hex_modifier)
                 keycode = Keycode(hex_modifier)
                 imported_sequence.append(hex_modifier)
-                print(imported_sequence)
 
         if text_string:
             imported_sequence.append(text_string)
