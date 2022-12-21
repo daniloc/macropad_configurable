@@ -148,8 +148,9 @@ for page in pages:
     apps.append(App(app))
 
 
-last_position = None
-last_encoder_switch = macropad.encoder_switch_debounced.pressed
+positions = [None, None]
+switch_states = [False, False]
+
 app_index = 0
 apps[app_index].switch()
 
@@ -157,18 +158,20 @@ apps[app_index].switch()
 # MAIN LOOP ----------------------------
 
 while True:
-    # Read encoder position. If it's changed, switch apps.
-    position = macropad.encoder
-    if position != last_position:
-        app_index = position % len(apps)
-        apps[app_index].switch()
-        last_position = position
+        
+    for encoder_index in range(2):
+        position = left_rotary.encoder if encoder_index == 0 else macropad.encoder
+        if position != positions[encoder_index]:
+            print(position)
+            positions[encoder_index] = position
+        
+        
 
     # Handle encoder button. If state has changed, and if there's a
     # corresponding macro, set up variables to act on this just like
     # the keypad keys, as if it were a 13th key/macro.
-    macropad.encoder_switch_debounced.update()
-    encoder_switch = macropad.encoder_switch_debounced.pressed
+    #macropad.encoder_switch_debounced.update()
+    #encoder_switch = macropad.encoder_switch_debounced.pressed
     
     # check Neopixel cluster
     
@@ -178,15 +181,24 @@ while True:
     for neokey_index in picker_cluster.active_keys:
         print(neokey_index)
     
-    # Check encoder
+    # Check encoders
     
-    if encoder_switch != last_encoder_switch:
-        last_encoder_switch = encoder_switch
-        if len(apps[app_index].macros) < 13:
-            continue  # No 13th macro, just resume main loop
-        key_number = 12  # else process below as 13th macro
-        pressed = encoder_switch
-    # Read key events from MacropadXXXYZZXXXXXYXXXXX
+    macropad.encoder_switch_debounced.update()
+    left_rotary.encoder_switch_debounced.update()
+    
+    left_rotary_switch_state = left_rotary.encoder_switch_debounced.pressed
+    right_rotary_switch_state = macropad.encoder_switch_debounced.pressed
+    
+    if left_rotary_switch_state != switch_states[0]:
+        print("left rotary")
+        key_number = 13
+        switch_states[0] = left_rotary_switch_state
+    
+    if right_rotary_switch_state != switch_states[1]:
+        print("right rotary")
+        key_number = 12
+        switch_states[1] = right_rotary_switch_state
+    # Read key events from Macropad
     else:
         event = macropad.keys.events.get()
         if not event or event.key_number >= len(apps[app_index].macros):
@@ -197,6 +209,9 @@ while True:
     # If code reaches here, a key or the encoder button WAS pressed/released
     # and there IS a corresponding macro available for it...other situations
     # are avoided by 'continue' statements above which resume the loop.
+    
+    if key_number >= len(apps[app_index].macros):
+        continue
 
     sequence = apps[app_index].macros[key_number][2]
     if pressed:
