@@ -12,17 +12,29 @@ import time
 import displayio
 import terminalio
 import json
+import board
+from rotary import RotaryBoard
+from picker import PickerCluster
 
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_text import label
 from adafruit_macropad import MacroPad
 from adafruit_hid.keycode import Keycode
+from adafruit_neokey.neokey1x4 import NeoKey1x4
+from adafruit_seesaw import seesaw, neopixel, rotaryio, digitalio
+
+i2c_bus = board.I2C()
+picker_cluster = PickerCluster(i2c_bus)
+
+left_rotary = RotaryBoard(i2c_bus)
+left_rotary.pixel.fill(0x220000)
 
 
 # CONFIGURABLES ------------------------
 
 MACRO_FOLDER = "/macros"
 MACRO_FILE = "macro.json"
+
 
 # CLASSES AND FUNCTIONS ----------------
 
@@ -61,6 +73,12 @@ macropad = MacroPad()
 macropad.display.auto_refresh = False
 macropad.pixels.auto_write = False
 
+
+# Neokey cluster
+
+for key in range(4):
+    picker_cluster.pixels[key] = 0x222222
+
 # Set up displayio group with all the labels
 group = displayio.Group()
 for key_index in range(12):
@@ -90,7 +108,6 @@ group.append(
 )
 macropad.display.show(group)
 
-# Load all the macro key setups from .py files in MACRO_FOLDER
 with open("macro.json") as f:
     pages = json.load(f)
 
@@ -152,12 +169,24 @@ while True:
     # the keypad keys, as if it were a 13th key/macro.
     macropad.encoder_switch_debounced.update()
     encoder_switch = macropad.encoder_switch_debounced.pressed
+    
+    # check Neopixel cluster
+    
+    
+                
+    
+    for neokey_index in picker_cluster.active_keys:
+        print(neokey_index)
+    
+    # Check encoder
+    
     if encoder_switch != last_encoder_switch:
         last_encoder_switch = encoder_switch
         if len(apps[app_index].macros) < 13:
             continue  # No 13th macro, just resume main loop
         key_number = 12  # else process below as 13th macro
         pressed = encoder_switch
+    # Read key events from MacropadXXXYZZXXXXXYXXXXX
     else:
         event = macropad.keys.events.get()
         if not event or event.key_number >= len(apps[app_index].macros):
