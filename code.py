@@ -66,7 +66,6 @@ class App:
         macropad.pixels.show()
         macropad.display.refresh()
 
-
 # INITIALIZATION -----------------------
 
 macropad = MacroPad()
@@ -153,7 +152,7 @@ switch_states = [False, False]
 
 app_index = 0
 apps[app_index].switch()
-
+pages = {}
 
 # MAIN LOOP ----------------------------
 
@@ -175,12 +174,25 @@ while True:
     
     # check Neopixel cluster
     
+    picker_cluster.debounce_update()
     
+    if len(picker_cluster.active_keys) >= 1:
                 
+        picker_selection = [0,0,0,0]
     
-    for neokey_index in picker_cluster.active_keys:
-        print(neokey_index)
-    
+        for neokey_index in picker_cluster.active_keys:
+            picker_selection[neokey_index] = 1
+            print(neokey_index)
+        
+        print("switching to ")
+        print(picker_selection)
+        
+        if pages.get(picker_selection, None) != None:
+
+            pages[picker_selection].switch()
+                
+        continue
+        
     # Check encoders
     
     macropad.encoder_switch_debounced.update()
