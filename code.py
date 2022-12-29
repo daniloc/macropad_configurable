@@ -11,10 +11,10 @@ import os
 import time
 import displayio
 import terminalio
-import json
 import board
 from rotary import RotaryBoard
 from picker import PickerCluster
+from configuration import Configuration
 
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_text import label
@@ -30,48 +30,14 @@ left_rotary = RotaryBoard(i2c_bus)
 left_rotary.pixel.fill(0x220000)
 
 
-# CONFIGURABLES ------------------------
-
-MACRO_FOLDER = "/macros"
-MACRO_FILE = "macro.json"
-
-
-# CLASSES AND FUNCTIONS ----------------
-
-
-class App:
-    """Class representing a host-side application, for which we have a set
-    of macro sequences. Project code was originally more complex and
-    this was helpful, but maybe it's excessive now?"""
-
-    def __init__(self, appdata):
-        self.name = appdata["name"]
-        self.macros = appdata["macros"]
-
-    def switch(self):
-        """Activate application settings; update OLED labels and LED
-        colors."""
-        group[13].text = self.name  # Application name
-        for i in range(12):
-            if i < len(self.macros):  # Key in use, set label + LED color
-                macropad.pixels[i] = self.macros[i][0]
-                group[i].text = self.macros[i][1]
-            else:  # Key not in use, no label or LED
-                macropad.pixels[i] = 0
-                group[i].text = ""
-        macropad.keyboard.release_all()
-        macropad.consumer_control.release()
-        macropad.mouse.release_all()
-        macropad.stop_tone()
-        macropad.pixels.show()
-        macropad.display.refresh()
-
 # INITIALIZATION -----------------------
 
 macropad = MacroPad()
 macropad.display.auto_refresh = False
 macropad.pixels.auto_write = False
 
+MACRO_FILE = "macro.json"
+configuration = Configuration(MACRO_FILE)
 
 # Neokey cluster
 
@@ -79,11 +45,11 @@ for key in range(4):
     picker_cluster.pixels[key] = 0x222222
 
 # Set up displayio group with all the labels
-group = displayio.Group()
+display_group = displayio.Group()
 for key_index in range(12):
     x = key_index % 3
     y = key_index // 3
-    group.append(
+    display_group.append(
         label.Label(
             terminalio.FONT,
             text="",
@@ -95,8 +61,8 @@ for key_index in range(12):
             anchor_point=(x / 2, 1.0),
         )
     )
-group.append(Rect(0, 0, macropad.display.width, 12, fill=0xFFFFFF))
-group.append(
+display_group.append(Rect(0, 0, macropad.display.width, 12, fill=0xFFFFFF))
+display_group.append(
     label.Label(
         terminalio.FONT,
         text="",
@@ -105,54 +71,12 @@ group.append(
         anchor_point=(0.5, 0.0),
     )
 )
-macropad.display.show(group)
-
-with open("macro.json") as f:
-    pages = json.load(f)
-
-apps = []
-
-for page in pages:
-
-    keys = page["keys"]
-
-    imported_keys = []
-
-    for key in keys:
-        color_hex_string = "0x" + key["color"]
-        color_hex = int(color_hex_string, 16)
-        macro = key["macro"]
-
-        text_string = macro.get("textContent")
-        modifiers = macro.get("modifiers")
-
-        imported_sequence = []
-
-        if modifiers:
-            for modifier in modifiers:
-                hex_modifier = int(modifier, 16)
-                print(hex_modifier)
-                keycode = Keycode(hex_modifier)
-                imported_sequence.append(hex_modifier)
-                print(imported_sequence)
-
-        if text_string:
-            imported_sequence.append(text_string)
-
-        configured_key = (color_hex, key["label"], imported_sequence)
-        imported_keys.append(configured_key)
-
-    app = {"name": page["name"], "macros": imported_keys}
-
-    apps.append(App(app))
+macropad.display.show(display_group)
 
 
 positions = [None, None]
 switch_states = [False, False]
-
-app_index = 0
-apps[app_index].switch()
-pages = {}
+active_page = None
 
 # MAIN LOOP ----------------------------
 
@@ -163,9 +87,7 @@ while True:
         if position != positions[encoder_index]:
             print(position)
             positions[encoder_index] = position
-        
-        
-
+    
     # Handle encoder button. If state has changed, and if there's a
     # corresponding macro, set up variables to act on this just like
     # the keypad keys, as if it were a 13th key/macro.
@@ -187,9 +109,15 @@ while True:
         print("switching to ")
         print(picker_selection)
         
-        if pages.get(picker_selection, None) != None:
-
-            pages[picker_selection].switch()
+        for pixel in picker_cluster.pixels:
+            print(pixel)
+                
+        if configuration.activate_page(picker_selection, display_group, macropad):
+            for key in range(4):
+                if picker_selection[key] == 1:
+                    picker_cluster.pixels[key] = 0x333333
+                else:
+                    picker_cluster.pixels[key] = 0x000000
                 
         continue
         
@@ -213,7 +141,7 @@ while True:
     # Read key events from Macropad
     else:
         event = macropad.keys.events.get()
-        if not event or event.key_number >= len(apps[app_index].macros):
+        if not event:
             continue  # No key events, or no corresponding macro, resume loop
         key_number = event.key_number
         pressed = event.pressed
