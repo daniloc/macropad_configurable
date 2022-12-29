@@ -92,9 +92,9 @@ while True:
         old_position = positions[encoder_index]
 
         if new_position > old_position:
-            print("right")
+            configuration.rotary_turn(encoder_index, const.DIRECTION_RIGHT)
         if new_position < old_position:
-            print("left")
+            configuration.rotary_turn(encoder_index, const.DIRECTION_LEFT)
             
         positions[encoder_index] = new_position
                 
@@ -118,22 +118,23 @@ while True:
         continue
         
     # Check encoders
-    
     macropad.encoder_switch_debounced.update()
     left_rotary.encoder_switch_debounced.update()
     
     left_rotary_switch_state = left_rotary.encoder_switch_debounced.pressed
     right_rotary_switch_state = macropad.encoder_switch_debounced.pressed
     
-    if left_rotary_switch_state != switch_states[0]:
+    if left_rotary_switch_state != switch_states[const.LEFT_ENCODER_INDEX]:
         print("left rotary")
         key_number = 13
-        switch_states[0] = left_rotary_switch_state
+        switch_states[const.LEFT_ENCODER_INDEX] = left_rotary_switch_state
+        configuration.macropad_keypress(key_number, left_rotary.encoder_switch_debounced.pressed)
     
-    if right_rotary_switch_state != switch_states[1]:
+    if right_rotary_switch_state != switch_states[const.RIGHT_ENCODER_INDEX]:
         print("right rotary")
         key_number = 12
-        switch_states[1] = right_rotary_switch_state
+        switch_states[const.RIGHT_ENCODER_INDEX] = right_rotary_switch_state
+        configuration.macropad_keypress(key_number, macropad.encoder_switch_debounced.pressed)
     # Read key events from Macropad
     else:
         event = macropad.keys.events.get()
