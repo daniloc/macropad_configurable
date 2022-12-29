@@ -36,9 +36,6 @@ macropad = MacroPad()
 macropad.display.auto_refresh = False
 macropad.pixels.auto_write = False
 
-MACRO_FILE = "macro.json"
-configuration = Configuration(MACRO_FILE)
-
 # Neokey cluster
 
 for key in range(4):
@@ -73,10 +70,12 @@ display_group.append(
 )
 macropad.display.show(display_group)
 
+MACRO_FILE = "macro.json"
+configuration = Configuration(MACRO_FILE, macropad, display_group, picker_cluster)
 
 positions = [None, None]
 switch_states = [False, False]
-active_page = None
+
 
 # MAIN LOOP ----------------------------
 
@@ -88,17 +87,11 @@ while True:
             print(position)
             positions[encoder_index] = position
     
-    # Handle encoder button. If state has changed, and if there's a
-    # corresponding macro, set up variables to act on this just like
-    # the keypad keys, as if it were a 13th key/macro.
-    #macropad.encoder_switch_debounced.update()
-    #encoder_switch = macropad.encoder_switch_debounced.pressed
-    
     # check Neopixel cluster
     
     picker_cluster.debounce_update()
     
-    if len(picker_cluster.active_keys) >= 1:
+    if len(picker_cluster.active_keys) > 0:
                 
         picker_selection = [0,0,0,0]
     
@@ -108,16 +101,8 @@ while True:
         
         print("switching to ")
         print(picker_selection)
-        
-        for pixel in picker_cluster.pixels:
-            print(pixel)
                 
-        if configuration.activate_page(picker_selection, display_group, macropad):
-            for key in range(4):
-                if picker_selection[key] == 1:
-                    picker_cluster.pixels[key] = 0x333333
-                else:
-                    picker_cluster.pixels[key] = 0x000000
+        configuration.activate_page(picker_selection)
                 
         continue
         

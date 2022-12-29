@@ -6,10 +6,21 @@ class Page:
     def __init__(self, pagecontent):
         self.name = pagecontent["name"]
         self.macros = pagecontent["macros"]
+        self.invocation = pagecontent["invocation"]
+        
+    def update_picker(self, picker):
+        for key in range(4):
+            if self.invocation[key] == 1:
+                picker.pixels[key] = 0x333333
+            else:
+                picker.pixels[key] = 0x000000
     
-    def switch(self, display_group, macropad):
+    def switch(self, display_group, macropad, picker):
         """Activate application settings; update OLED labels and LED
         colors."""
+        
+        self.update_picker(picker)
+        
         display_group[13].text = self.name  # Application name
         for i in range(12):
             if i < len(self.macros):  # Key in use, set label + LED color
@@ -27,9 +38,13 @@ class Page:
     
 class Configuration:
     
-    def __init__(self, config_file):
+    def __init__(self, config_file, macropad, display_group, picker):
         
         self.pages = {}
+        self.macropad = macropad
+        self.display_group = display_group
+        self.active_page = None
+        self.picker = picker
         
         with open(config_file) as f:
             page_data = json.load(f)
@@ -64,17 +79,19 @@ class Configuration:
                 configured_key = (color_hex, key["label"], imported_sequence)
                 imported_keys.append(configured_key)
             
-            imported_page = {"name": page["name"], "macros": imported_keys}
+            page_dictionary = {"name": page["name"], "macros": imported_keys, "invocation": tuple(page["invocation"])}
             
-            invocation = page["invocation"]
+            imported_page = Page(page_dictionary)
             
-            self.pages[tuple(invocation)] = Page(imported_page)
+            self.pages[imported_page.invocation] = imported_page
             
-    def activate_page(self, invocation, display_group, macropad):
+            if self.active_page == None:
+                self.active_page = imported_page
+                
+        self.activate_page(self.active_page.invocation)
+            
+    def activate_page(self, invocation):
         page = self.pages.get(tuple(invocation), None)
         
         if page != None:
-            page.switch(display_group, macropad)
-            return True
-        else:
-            return False
+            page.switch(self.display_group, self.macropad, self.picker)
