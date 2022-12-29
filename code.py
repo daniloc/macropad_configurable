@@ -23,6 +23,8 @@ from adafruit_hid.keycode import Keycode
 from adafruit_neokey.neokey1x4 import NeoKey1x4
 from adafruit_seesaw import seesaw, neopixel, rotaryio, digitalio
 
+import const
+
 i2c_bus = board.I2C()
 picker_cluster = PickerCluster(i2c_bus)
 
@@ -73,7 +75,7 @@ macropad.display.show(display_group)
 MACRO_FILE = "macro.json"
 configuration = Configuration(MACRO_FILE, macropad, display_group, picker_cluster)
 
-positions = [None, None]
+positions = [0, 0]
 switch_states = [False, False]
 
 
@@ -82,11 +84,20 @@ switch_states = [False, False]
 while True:
         
     for encoder_index in range(2):
-        position = left_rotary.encoder if encoder_index == 0 else macropad.encoder
-        if position != positions[encoder_index]:
-            print(position)
-            positions[encoder_index] = position
-    
+        if encoder_index == const.LEFT_ENCODER_INDEX:
+            new_position = left_rotary.encoder
+        else:
+            new_position = macropad.encoder
+            
+        old_position = positions[encoder_index]
+
+        if new_position > old_position:
+            print("right")
+        if new_position < old_position:
+            print("left")
+            
+        positions[encoder_index] = new_position
+                
     # check Neopixel cluster
     
     picker_cluster.debounce_update()
@@ -130,79 +141,12 @@ while True:
             continue  # No key events, or no corresponding macro, resume loop
         key_number = event.key_number
         pressed = event.pressed
+        
+        configuration.macropad_keypress(key_number, pressed)
 
     # If code reaches here, a key or the encoder button WAS pressed/released
     # and there IS a corresponding macro available for it...other situations
     # are avoided by 'continue' statements above which resume the loop.
-    
-    if key_number >= len(apps[app_index].macros):
-        continue
 
-    sequence = apps[app_index].macros[key_number][2]
-    if pressed:
-        # 'sequence' is an arbitrary-length list, each item is one of:
-        # Positive integer (e.g. Keycode.KEYPAD_MINUS): key pressed
-        # Negative integer: (absolute value) key released
-        # Float (e.g. 0.25): delay in seconds
-        # String (e.g. "Foo"): corresponding keys pressed & released
-        # List []: one or more Consumer Control codes (can also do float delay)
-        # Dict {}: mouse buttons/motion (might extend in future)
-        if key_number < 12:  # No pixel for encoder button
-            macropad.pixels[key_number] = 0xFFFFFF
-            macropad.pixels.show()
-        for item in sequence:
-            if isinstance(item, int):
-                if item >= 0:
-                    macropad.keyboard.press(item)
-                else:
-                    macropad.keyboard.release(-item)
-            elif isinstance(item, float):
-                time.sleep(item)
-            elif isinstance(item, str):
-                macropad.keyboard_layout.write(item)
-            elif isinstance(item, list):
-                for code in item:
-                    if isinstance(code, int):
-                        macropad.consumer_control.release()
-                        macropad.consumer_control.press(code)
-                    if isinstance(code, float):
-                        time.sleep(code)
-            elif isinstance(item, dict):
-                if "buttons" in item:
-                    if item["buttons"] >= 0:
-                        macropad.mouse.press(item["buttons"])
-                    else:
-                        macropad.mouse.release(-item["buttons"])
-                macropad.mouse.move(
-                    item["x"] if "x" in item else 0,
-                    item["y"] if "y" in item else 0,
-                    item["wheel"] if "wheel" in item else 0,
-                )
-                if "tone" in item:
-                    if item["tone"] > 0:
-                        macropad.stop_tone()
-                        macropad.start_tone(item["tone"])
-                    else:
-                        macropad.stop_tone()
-                elif "play" in item:
-                    macropad.play_file(item["play"])
-    else:
-        # Release any still-pressed keys, consumer codes, mouse buttons
-        # Keys and mouse buttons are individually released this way (rather
-        # than release_all()) because pad supports multi-key rollover, e.g.
-        # could have a meta key or right-mouse held down by one macro and
-        # press/release keys/buttons with others. Navigate popups, etc.
-        for item in sequence:
-            if isinstance(item, int):
-                if item >= 0:
-                    macropad.keyboard.release(item)
-            elif isinstance(item, dict):
-                if "buttons" in item:
-                    if item["buttons"] >= 0:
-                        macropad.mouse.release(item["buttons"])
-                elif "tone" in item:
-                    macropad.stop_tone()
-        macropad.consumer_control.release()
-        if key_number < 12:  # No pixel for encoder button
-            macropad.pixels[key_number] = apps[app_index].macros[key_number][0]
-            macropad.pixels.show()
+    
+    
