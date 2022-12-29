@@ -38,7 +38,7 @@ class NeoKey1x4Debounced(Seesaw):
         for pin_number in range(4, 8):
             self.pin_mode(pin_number, self.INPUT_PULLUP)
             pin = digitalio.DigitalIO(self, pin_number)
-            self.debounced_switches.append(Debouncer(pin, 0.1))
+            self.debounced_switches.append(Debouncer(pin, 0.05))
             
         
     def debounce_update(self):
