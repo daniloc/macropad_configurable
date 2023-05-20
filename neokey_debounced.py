@@ -30,7 +30,7 @@ class NeoKey1x4Debounced(Seesaw):
             self,
             _NEOKEY1X4_NEOPIX_PIN,
             _NEOKEY1X4_NUM_KEYS,
-            brightness=0.2,
+            brightness=0.3,
             pixel_order=neopixel.GRB,
         )
         # set the pins to inputs, pullups

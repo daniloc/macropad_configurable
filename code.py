@@ -12,6 +12,7 @@ import time
 import displayio
 import terminalio
 import board
+import storage
 from rotary import RotaryBoard
 from picker import PickerCluster
 from configuration import Configuration
@@ -120,7 +121,7 @@ while True:
     # Check encoders
     macropad.encoder_switch_debounced.update()
     left_rotary.encoder_switch_debounced.update()
-    
+
     left_rotary_switch_state = left_rotary.encoder_switch_debounced.pressed
     right_rotary_switch_state = macropad.encoder_switch_debounced.pressed
     

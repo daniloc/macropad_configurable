@@ -1,0 +1,8 @@
+{
+  "actions" : {
+    "run" : {
+      "enabled" : true,
+      "script" : "rsync -ru * \/Volumes\/CIRCUITPY"
+    }
+  }
+}

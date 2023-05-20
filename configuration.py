@@ -1,7 +1,6 @@
 import json
 import const
 
-
 from adafruit_hid.keycode import Keycode
 
 class Encoder:
@@ -21,6 +20,8 @@ class Encoder:
 class Macro:
     def __init__(self, macro_dictionary):
         
+        print(macro_dictionary)
+        
         text_string = macro_dictionary.get("textContent")
         modifiers = macro_dictionary.get("modifiers")
         
@@ -31,9 +32,12 @@ class Macro:
                 hex_modifier = int(modifier, 16)
                 keycode = Keycode(hex_modifier)
                 self.sequence.append(hex_modifier)
-        
+                
         if text_string:
-            self.sequence.append(text_string)
+            self.sequence.append(text_string.lower())
+        
+        print("sequence:")
+        print(self.sequence)
             
     def press(self, macropad):
         for item in self.sequence:
@@ -157,15 +161,15 @@ class Configuration:
                 configured_key = Key(color_hex, key["label"], macro)
                 imported_keys.append(configured_key)
                 
-            left_encoder = Encoder(page["rotaryEncoders"][const.RIGHT_ENCODER_INDEX])
-            right_encoder = Encoder(page["rotaryEncoders"][const.LEFT_ENCODER_INDEX])
+            left_encoder = Encoder(page["rotaryEncoders"][const.LEFT_ENCODER_INDEX])
+            right_encoder = Encoder(page["rotaryEncoders"][const.RIGHT_ENCODER_INDEX])
             
             imported_keys.append(right_encoder.press_action)
             imported_keys.append(left_encoder.press_action)
             
-            print("keys:")
-            print(imported_keys)
-            print(right_encoder.press_action)
+            #print("keys:")
+            #print(imported_keys)
+            #print(right_encoder.press_action)
             
             imported_page = Page(page["name"], imported_keys, tuple(page["invocation"]), left_encoder, right_encoder)
             
