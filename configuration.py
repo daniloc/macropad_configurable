@@ -44,16 +44,16 @@ class Macro:
             if isinstance(item, int):
                 if item >= 0:
                     macropad.keyboard.press(item)
-                else:
-                    macropad.keyboard.release(-item)
             elif isinstance(item, float):
                 time.sleep(item)
             elif isinstance(item, str):
-                macropad.keyboard_layout.write(item)
+                for key in item:
+                    keycodes = macropad.keyboard_layout.keycodes(key)
+                    for code in keycodes:
+                        macropad.keyboard.press(code)
             elif isinstance(item, list):
                 for code in item:
                     if isinstance(code, int):
-                        macropad.consumer_control.release()
                         macropad.consumer_control.press(code)
                     if isinstance(code, float):
                         time.sleep(code)
@@ -61,8 +61,6 @@ class Macro:
                 if "buttons" in item:
                     if item["buttons"] >= 0:
                         macropad.mouse.press(item["buttons"])
-                    else:
-                        macropad.mouse.release(-item["buttons"])
                 macropad.mouse.move(
                     item["x"] if "x" in item else 0,
                     item["y"] if "y" in item else 0,
@@ -78,10 +76,16 @@ class Macro:
                     macropad.play_file(item["play"])
                     
     def release(self, macropad):
+        print("releasing")
         for item in self.sequence:
             if isinstance(item, int):
                 if item >= 0:
                     macropad.keyboard.release(item)
+            elif isinstance(item, str):
+                for key in item:
+                    keycodes = macropad.keyboard_layout.keycodes(key)
+                    for code in keycodes:
+                        macropad.keyboard.release(code)
             elif isinstance(item, dict):
                 if "buttons" in item:
                     if item["buttons"] >= 0:
@@ -205,6 +209,7 @@ class Configuration:
                 self.macropad.pixels.show()
                 
             self.current_page.keys[key_index].macro.press(self.macropad)
+            return
             
         else:
             # Release any still-pressed keys, consumer codes, mouse buttons

@@ -137,14 +137,14 @@ while True:
         switch_states[const.RIGHT_ENCODER_INDEX] = right_rotary_switch_state
         configuration.macropad_keypress(key_number, macropad.encoder_switch_debounced.pressed)
     # Read key events from Macropad
-    else:
+    else:        
         event = macropad.keys.events.get()
         if not event:
             continue  # No key events, or no corresponding macro, resume loop
         key_number = event.key_number
         pressed = event.pressed
-        
-        configuration.macropad_keypress(key_number, pressed)
+                
+        configuration.macropad_keypress(event.key_number, event.pressed)
 
     # If code reaches here, a key or the encoder button WAS pressed/released
     # and there IS a corresponding macro available for it...other situations
